@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Site-45 Morph Request Maker</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <input type="text" id="usernameInput" placeholder="enter username here">
+    
+    <textarea id="inputCommands" placeholder="enter commands here"></textarea>
+    <textarea id="runOutput" placeholder="run command will show up here" readonly></textarea>
+    <div style="display: flex; margin-bottom: 10px; ">
+        <textarea id="discordOutput" placeholder="output to use in /request morph will show up here" readonly></textarea>
+        <button id="copyBtn" onclick="copyToClipboard()">Copy</button>
+    </div>
+
+    <script>
+        // filtering
+        const BANNED_COMMANDS = ['nuke', 'daybreak', 'god', 'ban', 'kick', 'ff', 'ungod', 'unff', 'goto'];
+        const BANNED_KEYWORDS = ['able', 'all', 'others', '%non-admins', 'fos', 'boom', 'btools','flumbuzzlecrankification'];
+
+        function containsBannedKeyword(command, bannedKeywords) {
+            const lowerCommand = command.toLowerCase();
+            return bannedKeywords.some(keyword => lowerCommand.includes(keyword));
+        }
+
+        function convertCommands() {
+            const input = document.getElementById('inputCommands').value;
+            const username = document.getElementById('usernameInput').value.trim();
+            const runOutput = document.getElementById('runOutput');
+            const discordOutput = document.getElementById('discordOutput');
+            
+            if (!input.trim()) {
+                runOutput.value = '';
+                discordOutput.value = '';
+                return;
+            }
+            
+            const lines = input.split('\n');
+            const validCommands = [];
+            
+            for (let line of lines) {
+                line = line.trim();
+                if (line === '') continue;
+                
+                let command = line.startsWith(':') ? line.substring(1) : line;
+                
+                if (username) {
+                    const USERNAME_PLACEHOLDERS = ['me', 'user', 'username', 'roblox username', 'name'];
+                    USERNAME_PLACEHOLDERS.forEach(placeholder => {
+                        const regex = new RegExp('\\b' + placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'gi');
+                        command = command.replace(regex, username);
+                    });
+                }
+                
+                const commandStart = command.split(' ')[0].toLowerCase();
+                if (BANNED_COMMANDS.includes(commandStart)) {
+                    continue;
+                }
+                
+                if (containsBannedKeyword(command, BANNED_KEYWORDS)) {
+                    continue;
+                }
+                
+                validCommands.push(command);
+            }
+            
+            if (validCommands.length === 0) {
+                runOutput.value = '';
+                discordOutput.value = '';
+                return;
+            }
+            
+            const rawCommand = ':run ' + validCommands.join(' & ');
+            runOutput.value = rawCommand;
+            
+            const base64Command = btoa(rawCommand);
+            const discordOutputValue = 'FISH' + base64Command;
+            discordOutput.value = discordOutputValue;
+        }
+        
+        function copyToClipboard() {
+            const discordOutput = document.getElementById('discordOutput');
+            if (!discordOutput.value.trim()) {
+                return;
+            }
+            
+            discordOutput.select();
+            discordOutput.setSelectionRange(0, 99999);
+            document.execCommand('copy');
+        }
+        
+        let convertTimeout;
+        document.getElementById('inputCommands').addEventListener('input', function() {
+            clearTimeout(convertTimeout);
+            convertTimeout = setTimeout(() => {
+                convertCommands();
+            }, 300);
+        });
+        
+        document.getElementById('usernameInput').addEventListener('input', function() {
+            clearTimeout(convertTimeout);
+            convertTimeout = setTimeout(() => {
+                convertCommands();
+            }, 300);
+        });
+    </script>
+</body>
+</html>
